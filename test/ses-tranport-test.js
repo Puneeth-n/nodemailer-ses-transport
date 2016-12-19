@@ -60,7 +60,7 @@ describe('SES Transport Tests', function () {
             done();
         });
     });
-    
+
     it('Should use region in messageId', function (done) {
         var client = sesTransport({
             AWSAccessKeyID: 'AWSACCESSKEY',
@@ -183,6 +183,36 @@ describe('SES Transport Tests', function () {
                 client.ses.sendRawEmail.restore();
                 done();
             });
+        });
+    });
+
+    it('Should use sourceArn', function (done) {
+        var client = sesTransport({
+            AWSAccessKeyID: 'AWSACCESSKEY',
+            AWSSecretKey: 'AWS/Secret/key',
+            sourceArn: 'testSourceArn'
+        });
+
+        sinon.stub(client.ses, 'sendRawEmail').yields(null, {
+            MessageId: 'abc'
+        });
+
+        client.send({
+            data: {},
+            message: new MockBuilder({
+                from: 'test@valid.sender',
+                to: 'test@valid.recipient'
+            }, 'message')
+        }, function (err, data) {
+            expect(err).to.not.exist;
+            expect(data.messageId).to.equal('abc@us-east-1.amazonses.com');
+            expect(client.ses.sendRawEmail.args[0][0]).to.deep.equal({
+                RawMessage: {
+                    Data: new Buffer('message')
+                },
+                SourceArn: 'testSourceArn'
+            });
+            done();
         });
     });
 });
